@@ -42,7 +42,7 @@ def _score_style(score: Optional[float]) -> str:
 
 def _score_text(score: Optional[float]) -> str:
     """Format a score for display."""
-    if score is None or score == 0:
+    if score is None:
         return "N/A"
     return f"{score:.2f}"
 
@@ -314,25 +314,33 @@ def display_random_anime(anime: dict[str, Any]) -> None:
     genres = _extract_names(anime.get("genres"))
     synopsis = _truncate(anime.get("synopsis") or "No synopsis.", 300)
 
-    header = f"[{BOLD_GREEN}]{title}[/]"
+    header = Text(title, style=BOLD_GREEN)
     if title_en and title_en != title:
-        header += f"  [{DIM}]({title_en})[/]"
+        header.append("  ")
+        header.append(f"({title_en})", style=DIM)
 
-    body_lines = [
-        header,
-        "",
-        f"  [{BOLD_CYAN}]Score:[/]    {Text(_score_text(score), style=_score_style(score))}",
-        f"  [{BOLD_CYAN}]Episodes:[/] {episodes}",
-        f"  [{BOLD_CYAN}]Status:[/]   {status}",
-        f"  [{BOLD_CYAN}]Genres:[/]   [{MAGENTA}]{genres}[/]",
-        "",
-        f"  {synopsis}",
-    ]
+    score_label = Text("  Score:    ", style=BOLD_CYAN)
+    score_label.append(_score_text(score), style=_score_style(score))
+
+    body = Text()
+    body.append_text(header)
+    body.append("\n\n")
+    body.append_text(score_label)
+    body.append(f"\n  ")
+    body.append("Episodes: ", style=BOLD_CYAN)
+    body.append(str(episodes))
+    body.append(f"\n  ")
+    body.append("Status:   ", style=BOLD_CYAN)
+    body.append(status)
+    body.append(f"\n  ")
+    body.append("Genres:   ", style=BOLD_CYAN)
+    body.append(genres, style=MAGENTA)
+    body.append(f"\n\n  {synopsis}")
 
     console.print()
     console.print(
         Panel(
-            "\n".join(str(line) for line in body_lines),
+            body,
             title="Random Anime Recommendation",
             title_align="center",
             subtitle=f"MAL ID: {anime.get('mal_id', '?')}",
@@ -388,14 +396,14 @@ def display_comparison(anime_a: dict[str, Any], anime_b: dict[str, Any]) -> None
             cell_a = Text(_score_text(val_a), style=_score_style(val_a))
             cell_b = Text(_score_text(val_b), style=_score_style(val_b))
         elif key in ("rank", "popularity"):
-            cell_a = f"#{val_a}" if val_a else "N/A"
-            cell_b = f"#{val_b}" if val_b else "N/A"
+            cell_a = f"#{val_a}" if val_a is not None else "N/A"
+            cell_b = f"#{val_b}" if val_b is not None else "N/A"
         elif key in ("members", "favorites"):
             cell_a = _format_number(val_a)
             cell_b = _format_number(val_b)
         else:
-            cell_a = str(val_a) if val_a else "N/A"
-            cell_b = str(val_b) if val_b else "N/A"
+            cell_a = str(val_a) if val_a is not None else "N/A"
+            cell_b = str(val_b) if val_b is not None else "N/A"
 
         table.add_row(label, cell_a, cell_b)
 

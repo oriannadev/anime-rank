@@ -30,7 +30,7 @@ class TestScoreText:
         assert _score_text(9.5) == "9.50"
 
     def test_zero_score(self):
-        assert _score_text(0) == "N/A"
+        assert _score_text(0) == "0.00"
 
     def test_none_score(self):
         assert _score_text(None) == "N/A"

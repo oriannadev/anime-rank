@@ -12,6 +12,7 @@ BASE_URL = "https://api.jikan.moe/v4"
 
 # Jikan enforces 3 requests/second. We track timestamps to stay under.
 _request_timestamps: list[float] = []
+_rate_lock: asyncio.Lock = asyncio.Lock()
 _RATE_LIMIT = 3
 _RATE_WINDOW = 1.0  # seconds
 
@@ -58,17 +59,18 @@ class JikanClient:
     @staticmethod
     async def _wait_for_rate_limit() -> None:
         """Sleep if necessary to respect the 3-requests-per-second limit."""
-        now = time.monotonic()
-        # Prune timestamps older than the window
-        while _request_timestamps and now - _request_timestamps[0] > _RATE_WINDOW:
-            _request_timestamps.pop(0)
+        async with _rate_lock:
+            now = time.monotonic()
+            # Prune timestamps older than the window
+            while _request_timestamps and now - _request_timestamps[0] > _RATE_WINDOW:
+                _request_timestamps.pop(0)
 
-        if len(_request_timestamps) >= _RATE_LIMIT:
-            wait = _RATE_WINDOW - (now - _request_timestamps[0]) + 0.05
-            if wait > 0:
-                await asyncio.sleep(wait)
+            if len(_request_timestamps) >= _RATE_LIMIT:
+                wait = _RATE_WINDOW - (now - _request_timestamps[0]) + 0.05
+                if wait > 0:
+                    await asyncio.sleep(wait)
 
-        _request_timestamps.append(time.monotonic())
+            _request_timestamps.append(time.monotonic())
 
     # -- core request ----------------------------------------------------------
 
